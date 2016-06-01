@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>LessCompiler</id>
+    <version>1.0.5</version>
+    <title>IE9 Less compiler</title>
+    <authors>Daniyar Kalyev, Aman Rawal</authors>
+    <owners>Daniyar Kaliyev</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>IE9 limited css rules fix</description>
+    <releaseNotes>Fixed some bug with media query</releaseNotes>
+    <copyright>Copyright 2016</copyright>
+  </metadata>
+</package>

@@ -1,6 +1,7 @@
 ﻿using dotless.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,19 +16,26 @@ namespace LessCompiler
         const string RULES_REGEX = @"[-\\a-zA-Z0-9#>,.@:\s()\[\]""=_^*+~]+(\{[-=a-zA-Z0-9:#?();""%\s\\.',_/\{\}*!]*\}\s\}|\{[-=a-zA-Z0-9:#?();""%\s\\.',_/*!]*\})";
         const string INNER_RULES_REGEX = @"[-\\a-zA-Z0-9#>,.@:\s()\[\]""=_^*+~]+(\{[-=a-zA-Z0-9:#?();""%\s\\.',_/*!]*\})";
         const string RULES_BODY_REGEX = @"(\{[-=a-zA-Z0-9:#?();""%\s\\.',_/\{\}*!]*\}\s\}|\{[-=a-zA-Z0-9:#?();""%\s\\.',_/*!]*\})";
-        const string MEDIA_REGEX = @"@media[-a-zA-Z0-9:().,/\s]*\{[-a-zA-Z0-9:#?();""\^~=>%\s\\.',_\{\}\[\]/*!]*\}\s*\}";
-        const string MEDIA_HEADER_REGEX = @"@media[-a-zA-Z0-9:().,/\s]*";
-        const string MEDIA_BODY_REGEX = @"\{[-a-zA-Z0-9:#?();""\^~=>%\s\\.',_\{\}\[\]/*!]*\}\s*\}";
+        const string MEDIA_REGEX = @"@media[-a-zA-Z0-9:()@.,/\s]*\{[-a-zA-Z0-9:#?+();""\^~=>%\s\\.',_\{\}\[\]/*!]*\}\s*\}";
+        const string MEDIA_HEADER_REGEX = @"@media[-a-zA-Z0-9:@().,/\s]*";
+        const string MEDIA_BODY_REGEX = @"\{[-a-zA-Z0-9:#?+();""\^~=>%\s\\.',_\{\}\[\]/*!]*\}\s*\}";
         const int RULES_LIMIT = 4095;
 
-        public static string CompileLess(string virtualPath)
+        ///<summary>
+        ///Compiles less file into multiple css files if total number of css selectors is > 4095. 
+        ///<para>Creates "ie9" folder at the same level as less file and puts css files in there.
+        ///The output "style.css" will import other css files.</para>
+        ///<param name="absolutePath">Absolute path to less file.</param>
+        /// </summary>
+        public static string CompileLess(string absolutePath)
         {
+            Trace.WriteLine("Compilation process started...");
             var files_list = new List<string>();
             var dotlessConfig = new dotless.Core.configuration.DotlessConfiguration();
             //dotlessConfig.Web = true;
             dotlessConfig.RootPath = "../";
-            var fileLocation = virtualPath;
-            var relDir = virtualPath.Substring(0, virtualPath.LastIndexOf("\\"));
+            var fileLocation = absolutePath;
+            var relDir = absolutePath.Substring(0, absolutePath.LastIndexOf("\\"));
             var currentDir = relDir;
             var count = 0;
             if (File.Exists(fileLocation))
@@ -68,11 +76,13 @@ namespace LessCompiler
                     }
 
                 }
+                file.Close();
+                Trace.WriteLine("Compilation process ended. File is closed.");
             }
             return string.Format("{0}/ie9/style.css", relDir);
         }
 
-        public static string RemoveComments(string input)
+        private static string RemoveComments(string input)
         {
             var comment_matches = Regex.Matches(input, COMMENTS_REGEX);
 
@@ -89,7 +99,7 @@ namespace LessCompiler
             return dev_string;
         }
 
-        public static List<Media> GetMedias(string input, out string reminder)
+        private static List<Media> GetMedias(string input, out string reminder)
         {
             var medias = new List<Media>();
 
@@ -121,7 +131,7 @@ namespace LessCompiler
             return medias;
         }
 
-        public static List<Rule> GetRules(string input, string regex)
+        private static List<Rule> GetRules(string input, string regex)
         {
             var rules_matches = Regex.Matches(input, regex);
 
@@ -136,7 +146,7 @@ namespace LessCompiler
             return rules;
         }
 
-        public static List<string> MakeFilesFromRules(List<Rule> rules)
+        private static List<string> MakeFilesFromRules(List<Rule> rules)
         {
             var list = new List<string>();
             var current_selectors_count = 0;
@@ -159,7 +169,7 @@ namespace LessCompiler
             return list;
         }
 
-        public static List<string> MakeFilesFromMedia(List<Media> medias)
+        private static List<string> MakeFilesFromMedia(List<Media> medias)
         {
             var list = new List<string>();
             var current_selectors_count = 0;
@@ -192,7 +202,7 @@ namespace LessCompiler
             return list;
         }
 
-        public static List<Media> SplitMedias(Media media)
+        private static List<Media> SplitMedias(Media media)
         {
             var list = new List<Media>();
             var count = 0;
@@ -228,7 +238,7 @@ namespace LessCompiler
             return list;
         }
 
-        public static Dictionary<string, string> BuildFileNames(List<string> contents)
+        private static Dictionary<string, string> BuildFileNames(List<string> contents)
         {
             var file_name_counter = 0;
             string tmp_file_name = "";
@@ -243,8 +253,9 @@ namespace LessCompiler
             return file_and_contents_dic;
         }
 
-        public static void AssembleFiles(Dictionary<string, string> files, string baseDir, string relDir)
+        private static void AssembleFiles(Dictionary<string, string> files, string baseDir, string relDir)
         {
+            Trace.WriteLine("Assembling the files.");
             var dirName = string.Format("{0}\\ie9", baseDir);
             if (!Directory.Exists(dirName))
             {
@@ -265,9 +276,10 @@ namespace LessCompiler
             }
 
             File.WriteAllText("style.css", final_style_content);
+            Trace.WriteLine("Assembly process finished.");
         }
 
-        public static void DeleteFilesInDirectory(string dirName)
+        private static void DeleteFilesInDirectory(string dirName)
         {
             var dir = new DirectoryInfo(dirName);
             foreach (var file in dir.GetFiles())
@@ -276,7 +288,7 @@ namespace LessCompiler
             }
         }
 
-        public static Rule GetRule(string input)
+        private static Rule GetRule(string input)
         {
             var rule_body = Regex.Match(input, RULES_BODY_REGEX).Value;
             var rule_header = input.Substring(0, input.IndexOf(rule_body));
@@ -290,7 +302,7 @@ namespace LessCompiler
             };
         }
 
-        public class Media
+        private class Media
         {
             public string EntireMedia { get; set; }
             public string MediaHeader { get; set; }
@@ -300,7 +312,7 @@ namespace LessCompiler
             public List<Rule> Rules { get; set; }
         }
 
-        public class Rule
+        private class Rule
         {
             public string EntireRule { get; set; }
             public string Header { get; set; }
@@ -309,7 +321,7 @@ namespace LessCompiler
             public int SelectorCount { get; set; }
         }
 
-        public class Stylesheet
+        private class Stylesheet
         {
             public List<Media> Medias { get; set; }
 
