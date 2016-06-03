@@ -40,8 +40,8 @@ namespace LessCompiler
             var count = 0;
             if (File.Exists(fileLocation))
             {
-                System.IO.StreamReader file = new System.IO.StreamReader(fileLocation);
-                using (file)
+                
+                using (var file = new System.IO.StreamReader(fileLocation))
                 {
                     Directory.SetCurrentDirectory(currentDir);
                     string parsed = Less.Parse(file.ReadToEnd(), dotlessConfig);
@@ -74,9 +74,9 @@ namespace LessCompiler
                         files_list = files.Keys.ToList();
                         AssembleFiles(files, currentDir, relDir);
                     }
-
+                    file.Close();
                 }
-                file.Close();
+                
                 Trace.WriteLine("Compilation process ended. File is closed.");
             }
             return string.Format("{0}/ie9/style.css", relDir);
